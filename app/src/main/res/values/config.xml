@@ -4,10 +4,11 @@
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
     <string-array name="dock_apps">
+        <item>com.playbridge.player</item>
         <item>org.smarttube.stable</item>
-        <item>com.spotify.tv.android</item>
-        <item>org.videolan.vlc</item>
-        <item>app.netmirror.newtv</item>
+        <item>com.lagradost.cloudstream3</item>
+        <item>ch.protonvpn.android</item>
+        <item>org.localsend.localsend_app</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty; a theme can
@@ -16,6 +17,7 @@
 
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->
     <string-array name="hidden_apps">
+        <item>com.netflix.ninja</item>
         <item>com.android.tv</item>
         <item>com.mitv.gallery</item>
     </string-array>
