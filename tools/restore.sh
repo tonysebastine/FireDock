@@ -70,6 +70,7 @@ if [ -d "$TARGET_PATH" ] && [ -f "$TARGET_PATH/metadata.env" ]; then
     echo "==> [2/5] Restoring stock YouTube packages..."
     adb -s "$DEV" shell pm enable --user 0 com.google.android.youtube.tv >/dev/null 2>&1 || true
     adb -s "$DEV" shell pm enable --user 0 com.google.android.youtube.tvmusic >/dev/null 2>&1 || true
+    adb -s "$DEV" shell pm enable --user 0 com.amazon.firetv.youtube >/dev/null 2>&1 || true
 
     # 3. Restore Original Home Launcher
     echo "==> [3/5] Restoring original Home launcher..."

@@ -121,21 +121,41 @@ if [ "$WANTS_LAUNCHER" = true ]; then
 
     # ── PHASE 3: Set Home Activity & Verify ─────────────────────────
     echo "==> [Phase 3] Setting Apple TV Launcher as default Home..."
+    # Standard method (works on AOSP Android TV / Google TV)
     adb -s "$TARGET_DEV" shell cmd package set-home-activity --user 0 com.appletv.launcher/.MainActivity >/dev/null 2>&1 || true
 
     HOME_NOW=$(adb -s "$TARGET_DEV" shell $HOME_QUERY 2>/dev/null | tail -n 1 | tr -d '\r' | cut -d/ -f1 || true)
     echo "    Current Home owner: $HOME_NOW"
 
+    # ── Fire OS handling ──
+    # Amazon Fire OS locks com.amazon.tv.launcher as a system protected package
+    # and ignores cmd package set-home-activity.
+    # Instead, Home button presses are intercepted and redirected to Apple TV Launcher
+    # via HomeKeyService accessibility service.
+    if [ "$HOME_NOW" != "com.appletv.launcher" ]; then
+        IS_FIRE_OS=$(adb -s "$TARGET_DEV" shell getprop ro.product.manufacturer 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d '\r' || true)
+        if echo "$IS_FIRE_OS" | grep -q 'amazon'; then
+            echo "    ⚡ Fire OS detected — verifying HomeKeyService accessibility redirection..."
+            ACC_SVC=$(adb -s "$TARGET_DEV" shell settings get secure enabled_accessibility_services 2>/dev/null | tr -d '\r' || true)
+            if echo "$ACC_SVC" | grep -q 'com.appletv.launcher'; then
+                echo "    ✅ Fire OS Home button redirection active via HomeKeyService."
+                HOME_NOW="com.appletv.launcher"
+            fi
+        fi
+    fi
+
     # Only disable old stock launcher if Home is verified and old stock is NOT protected
     if [ "$HOME_NOW" = "com.appletv.launcher" ]; then
         echo "    ✅ Home verified: com.appletv.launcher"
-        if [ -n "$ORIG_HOME" ] && [ "$ORIG_HOME" != "com.appletv.launcher" ] && [ "$ORIG_HOME" != "none" ] && [ "$ORIG_HOME" != "android" ]; then
+        # For non-Amazon devices: also disable whichever was the original stock launcher
+        if [ -n "$ORIG_HOME" ] && [ "$ORIG_HOME" != "com.appletv.launcher" ] && \
+           [ "$ORIG_HOME" != "none" ] && [ "$ORIG_HOME" != "android" ] && \
+           [ "$ORIG_HOME" != "com.amazon.tv.launcher" ]; then
             if is_protected "$ORIG_HOME"; then
                 echo "    🛡️  Original Home ($ORIG_HOME) is in protected list — leaving enabled."
             else
                 echo "    Disabling previous stock launcher: $ORIG_HOME"
                 adb -s "$TARGET_DEV" shell pm disable-user --user 0 "$ORIG_HOME" >/dev/null 2>&1 || true
-                # Verify Home again after disabling stock
                 POST_DISABLE_HOME=$(adb -s "$TARGET_DEV" shell $HOME_QUERY 2>/dev/null | tail -n 1 | tr -d '\r' | cut -d/ -f1 || true)
                 if [ "$POST_DISABLE_HOME" != "com.appletv.launcher" ]; then
                     echo "⚠️ Warning: Home changed unexpectedly to $POST_DISABLE_HOME. Re-enabling $ORIG_HOME..."
@@ -203,6 +223,7 @@ if grep -qF '[x] INSTALL_SMARTTUBE' "$PLAN_FILE"; then
             echo "    Disabling stock ad-supported YouTube..."
             adb -s "$TARGET_DEV" shell pm disable-user --user 0 com.google.android.youtube.tv >/dev/null 2>&1 || true
             adb -s "$TARGET_DEV" shell pm disable-user --user 0 com.google.android.youtube.tvmusic >/dev/null 2>&1 || true
+            adb -s "$TARGET_DEV" shell pm disable-user --user 0 com.amazon.firetv.youtube >/dev/null 2>&1 || true
         fi
     else
         echo "⚠️ Warning: SmartTube installation did not complete. Stock YouTube left ENABLED."

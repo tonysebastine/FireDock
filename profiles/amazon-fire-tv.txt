@@ -10,3 +10,4 @@ com.amazon.vizzini
 com.amazon.device.crashmanager
 com.amazon.kato
 com.amazon.client.metrics
+com.amazon.firetv.troubleshooting
