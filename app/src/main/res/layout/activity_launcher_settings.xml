@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- Launcher settings as a tvOS Settings page: centred title, a large icon on the left half,
      the list on the right half (scrolls on its own). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -78,6 +78,11 @@
                     <TextView android:id="@+id/columns6" style="@style/SettingsColumnChoice" android:text="6" />
                     <TextView android:id="@+id/columns7" style="@style/SettingsColumnChoice" android:text="7" />
                 </LinearLayout>
+                <TextView
+                    android:id="@+id/wallpaperChoice"
+                    style="@style/SettingsRow"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/wallpapers_title" />
 
                 <TextView
                     android:id="@+id/animationsChoice"

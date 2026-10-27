@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Apple TV Launcher</string>
+    <string name="app_name">FireDock</string>
     <string name="inputs">Inputs</string>
     <string name="wifi">Wi-Fi</string>
     <string name="settings">Settings</string>
@@ -27,6 +27,8 @@
     <string name="home_settings">Choose default home</string>
     <string name="home_settings_help">Select your original home to stop using Apple TV Launcher as Home, or Apple TV Launcher to switch back. The original launcher must be enabled and your TV must provide a home picker; use the restore script first if it was disabled.</string>
     <string name="launcher_settings">Launcher settings</string>
+    <string name="wallpapers_title">Wallpaper</string>
+    <string name="wallpaper_default">Default (Off / Plain)</string>
     <string name="columns_label">Apps per row</string>
     <string name="animations_state">Animations: %1$s</string>
     <string name="advanced_effects">Advanced effects</string>
@@ -64,4 +66,5 @@
     <string name="card_state_new">New</string>
     <string name="card_state_new_key">New key</string>
     <string name="card_state_new_label">New name</string>
+    <string name="quick_volume">Volume</string>
 </resources>

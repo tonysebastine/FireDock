@@ -1,0 +1,92 @@
+# Curated Phone Bloatware & Telemetry Database by Vendor
+
+# --- Xiaomi / POCO / Redmi (MIUI / HyperOS) ---
+com.miui.analytics
+com.miui.msa.global
+com.mi.globalbrowser
+com.miui.bugreport
+com.miui.miservice
+com.miui.yellowpage
+com.miui.hybrid
+com.miui.hybrid.accessory
+com.xiaomi.mipicks
+com.xiaomi.glgm
+com.xiaomi.payment
+com.miui.videoplayer
+com.miui.player
+com.miui.compass
+com.miui.notes
+com.miui.cleanmaster
+
+# --- Samsung (One UI) ---
+com.samsung.android.bixby.agent
+com.samsung.android.bixby.service
+com.samsung.android.bixbyvision.framework
+com.samsung.android.game.gamehome
+com.samsung.android.game.gametools
+com.samsung.android.kidsinstaller
+com.samsung.android.app.spage
+com.sec.android.app.sbrowser
+com.samsung.android.app.tips
+com.samsung.android.voc
+com.samsung.android.authfw
+com.samsung.android.samsungpass
+com.samsung.android.samsungpassautofill
+
+# --- BBK: Realme / Oppo / OnePlus (ColorOS / OxygenOS / RealmeUI) ---
+com.heytap.mcs
+com.heytap.market
+com.heytap.cloud
+com.heytap.browser
+com.nearme.atlas
+com.coloros.gamespace
+com.oppo.quicksearchbox
+com.coloros.compass
+com.oplus.cosa
+com.oneplus.membership
+
+# --- Vivo / iQOO (Funtouch OS / OriginOS) ---
+# App Store & Game Center
+com.vivo.appstore
+com.vivo.game
+com.vivo.gamecube
+com.bbk.appstore
+com.bbk.theme
+com.bbk.theme.resources
+
+# Browser & Search / Assistant
+com.vivo.browser
+com.vivo.globalsearch
+com.vivo.hiboard
+com.vivo.assistant
+
+# Telemetry, Push & Ads
+com.vivo.pushservice
+com.vivo.ups
+com.vivo.abe
+com.vivo.daemonService
+com.vivo.contentcatcher
+
+# Pre-installed Vivo Bloat / Tools
+com.vivo.easyshare
+com.vivo.compass
+com.vivo.weather
+com.vivo.weather.provider
+com.vivo.share
+com.vivo.carmode
+com.bbk.cloud
+com.bbk.account
+com.vivo.video.floating
+com.vivo.tips
+com.vivo.vtouch
+com.vivo.dream.weather
+com.vivo.motormode
+com.vivo.pem
+
+# --- General Carrier / Meta / Third-Party Pre-installs ---
+com.facebook.katana
+com.facebook.system
+com.facebook.appmanager
+com.facebook.services
+com.netflix.partner.activation
+com.amazon.appmanager

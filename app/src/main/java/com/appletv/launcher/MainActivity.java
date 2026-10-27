@@ -310,9 +310,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(AppAdapter.tileWidthPx(inner, COLUMNS, density)), density);
             int dockRow = itemH + (int) ((6 + 12) * density);   // item height plus DockDecoration offsets
             int gridRows = itemH * rowsBelowDock;
-            int want = (int) (140 * density);
+            int want = Math.max((int) (40 * density), h - dockRow - (int) (20 * density));
             if (grid.getPaddingTop() != want) {
-                grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
+                grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), (int) (20 * density));
             }
         });
 
@@ -519,6 +519,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateInputsButton();
         sky.update();
         handler.postDelayed(minuteTick, MINUTE_MS);
+        // Notify HomeKeyService overlay to hide now that MainActivity is drawn.
+        getWindow().getDecorView().post(HomeKeyService::appShown);
         if (festive && diya != null) {
             diya.start();
             LocalDate today = LocalDate.now();
@@ -1039,6 +1041,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             btnWifi.setText(text);
         }
+        // Notify HomeKeyService overlay to hide now that MainActivity is drawn.
+        getWindow().getDecorView().post(HomeKeyService::appShown);
         if (festive && diya != null) {
             if (online && flame == 0) flame = 3;   // online some other way (cellular, USB tethering)
             diya.setSteady(steady);

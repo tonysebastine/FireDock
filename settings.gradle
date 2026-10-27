@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Apple-Tv-Launcher"
+rootProject.name = "FireDock"
 include ':app'
