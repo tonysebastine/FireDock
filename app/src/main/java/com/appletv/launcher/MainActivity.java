@@ -430,37 +430,43 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /**
      * A theme's full-screen picture behind everything. Decoded once at the size CENTER_CROP shows, so it
      * costs a screen-sized bitmap (about 4 MB at 1080p), which is the price of a wallpaper on a 1 GB TV.
-     * A picture over 4K is refused rather than decoded; the plain colour stays.
+     * Decoded asynchronously to keep the main thread fluid.
      */
     private void showWallpaper(File file) {
-        try {
-            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
-            opts.inJustDecodeBounds = true;
-            android.graphics.BitmapFactory.decodeFile(file.getPath(), opts);
-            int w = opts.outWidth, h = opts.outHeight;
-            if (w <= 0 || h <= 0) return;
-            int sample = WallpaperSize.sampleSize(w, h, dm.widthPixels, dm.heightPixels);
-            // The limit applies to what is decoded, so a 12 MP photo still works once it is sampled down.
-            if (!WallpaperSize.accepted(w / sample, h / sample)) return;
-            opts.inJustDecodeBounds = false;
-            opts.inSampleSize = sample;
-            int[] scale = WallpaperSize.coverScale(w / sample, h / sample, dm.widthPixels, dm.heightPixels);
-            if (scale != null) {
-                opts.inScaled = true;
-                opts.inDensity = scale[0];
-                opts.inTargetDensity = scale[1];
+        new Thread(() -> {
+            try {
+                android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+                android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
+                opts.inJustDecodeBounds = true;
+                android.graphics.BitmapFactory.decodeFile(file.getPath(), opts);
+                int w = opts.outWidth, h = opts.outHeight;
+                if (w <= 0 || h <= 0) return;
+                int sample = WallpaperSize.sampleSize(w, h, dm.widthPixels, dm.heightPixels);
+                if (!WallpaperSize.accepted(w / sample, h / sample)) return;
+                opts.inJustDecodeBounds = false;
+                opts.inSampleSize = sample;
+                int[] scale = WallpaperSize.coverScale(w / sample, h / sample, dm.widthPixels, dm.heightPixels);
+                if (scale != null) {
+                    opts.inScaled = true;
+                    opts.inDensity = scale[0];
+                    opts.inTargetDensity = scale[1];
+                }
+                opts.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565;   // no alpha needed, half the memory
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeFile(file.getPath(), opts);
+                if (bmp == null) return;
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) {
+                        bmp.recycle();
+                        return;
+                    }
+                    android.widget.ImageView wall = new android.widget.ImageView(this);
+                    wall.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                    wall.setImageBitmap(bmp);
+                    root.addView(wall, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                });
+            } catch (Exception | OutOfMemoryError ignored) {
             }
-            opts.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565;   // no alpha needed, half the memory
-            android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeFile(file.getPath(), opts);
-            if (bmp == null) return;
-            android.widget.ImageView wall = new android.widget.ImageView(this);
-            wall.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-            wall.setImageBitmap(bmp);
-            root.addView(wall, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        } catch (Exception | OutOfMemoryError e) {
-            // A bad or huge picture must never take the home screen down; the plain colour stays.
-        }
+        }, "FireDock-WallpaperLoader").start();
     }
 
     /**

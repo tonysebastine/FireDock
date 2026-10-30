@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.SystemClock;
+import android.media.AudioManager;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.View;
@@ -210,6 +211,22 @@ public class HomeKeyService extends AccessibilityService {
             if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
                 pausedUntil = 0;
                 cover();
+            }
+            return true;
+        }
+        // App Button 3 (KEY_APP_3, scancode 746) -> Volume Down
+        if (event.getScanCode() == 746 || event.getKeyCode() == 286) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+                if (am != null) am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI);
+            }
+            return true;
+        }
+        // App Button 4 (KEY_APP_4, scancode 747) -> Volume Up
+        if (event.getScanCode() == 747 || event.getKeyCode() == 287) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+                if (am != null) am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI);
             }
             return true;
         }

@@ -106,11 +106,24 @@ public class RecentAppsActivity extends Activity {
         wireButtons();
     }
 
+    private final java.util.concurrent.Executor bgExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final android.os.Handler uiHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean loadingApps = false;
+
     @Override
     protected void onResume() {
         super.onResume();
-        loadApps();
-        buildCards();
+        if (loadingApps) return;
+        loadingApps = true;
+        bgExecutor.execute(() -> {
+            loadApps();
+            uiHandler.post(() -> {
+                loadingApps = false;
+                if (!isFinishing() && !isDestroyed()) {
+                    buildCards();
+                }
+            });
+        });
     }
 
     // ------------------------------------------------------------------ styling
@@ -276,7 +289,7 @@ public class RecentAppsActivity extends Activity {
             }
         }
         while (apps.size() > MAX_APPS) apps.remove(apps.size() - 1);
-        updateSubtitle();
+        uiHandler.post(this::updateSubtitle);
     }
 
     private void updateSubtitle() {
@@ -432,7 +445,6 @@ public class RecentAppsActivity extends Activity {
         final TextView name = item.findViewById(R.id.txtName);
         final TextView when = item.findViewById(R.id.txtWhen);
         final TextView line1 = item.findViewById(R.id.line1);
-        final int w0 = card.getLayoutParams().width, h0 = card.getLayoutParams().height;
         final int w1 = dp(big ? FOCUS_W : CARD_W), h1 = dp(big ? FOCUS_H : CARD_H);
 
         name.setTextSize(big ? 15 : 12);
@@ -440,24 +452,21 @@ public class RecentAppsActivity extends Activity {
         when.setTextSize(big ? 11 : 9.5f);
         line1.setTextSize(big ? 13 : 10.5f);
 
-        if (!animate) {
-            card.getLayoutParams().width = w1;
-            card.getLayoutParams().height = h1;
-            card.requestLayout();
-            return;
-        }
-        ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);
-        va.setDuration(220);
-        va.setInterpolator(new DecelerateInterpolator());
-        va.addUpdateListener(an -> {
-            float f = (float) an.getAnimatedValue();
-            ViewGroup.LayoutParams lp = card.getLayoutParams();
-            lp.width = Math.round(w0 + (w1 - w0) * f);
-            lp.height = Math.round(h0 + (h1 - h0) * f);
+        ViewGroup.LayoutParams lp = card.getLayoutParams();
+        if (lp.width != w1 || lp.height != h1) {
+            lp.width = w1;
+            lp.height = h1;
             card.setLayoutParams(lp);
-            card.invalidateOutline();
-        });
-        va.start();
+        }
+        if (animate) {
+            card.setScaleX(big ? 0.94f : 1.05f);
+            card.setScaleY(big ? 0.94f : 1.05f);
+            card.animate().scaleX(1f).scaleY(1f).setDuration(180).setInterpolator(new DecelerateInterpolator()).start();
+        } else {
+            card.animate().cancel();
+            card.setScaleX(1f);
+            card.setScaleY(1f);
+        }
     }
     // ------------------------------------------------------------------ actions
 
@@ -517,7 +526,7 @@ public class RecentAppsActivity extends Activity {
             cardRow.removeView(item);
             cardViews.remove(idx);
             apps.remove(idx);
-            updateSubtitle();
+            uiHandler.post(this::updateSubtitle);
             if (cardViews.isEmpty()) { animateGlowTo(GLOW_DEFAULT); btnClearAll.requestFocus(); return; }
             selected = Math.min(idx, cardViews.size() - 1);
             setCardSize(cardViews.get(selected), true, true);
@@ -536,7 +545,7 @@ public class RecentAppsActivity extends Activity {
         apps.clear();
         cardViews.clear();
         cardRow.removeAllViews();
-        updateSubtitle();
+        uiHandler.post(this::updateSubtitle);
         animateGlowTo(GLOW_DEFAULT);
     }
 
