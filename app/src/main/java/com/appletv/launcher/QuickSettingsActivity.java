@@ -3,6 +3,7 @@ package com.appletv.launcher;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,7 +13,10 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -55,12 +59,46 @@ public final class QuickSettingsActivity extends Activity {
     private enum SubViewMode { NONE, WIFI, BLUETOOTH }
     private SubViewMode currentMode = SubViewMode.NONE;
 
+    private BluetoothProfile a2dpProxy;
+    private BluetoothProfile headsetProxy;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final BluetoothProfile.ServiceListener profileListener = new BluetoothProfile.ServiceListener() {
+        @Override
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            if (profile == BluetoothProfile.A2DP) {
+                a2dpProxy = proxy;
+            } else if (profile == BluetoothProfile.HEADSET) {
+                headsetProxy = proxy;
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(int profile) {
+            if (profile == BluetoothProfile.A2DP) {
+                a2dpProxy = null;
+            } else if (profile == BluetoothProfile.HEADSET) {
+                headsetProxy = null;
+            }
+        }
+    };
+
     private final BroadcastReceiver wifiScanReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (currentMode == SubViewMode.WIFI) {
                 populateWifiList();
             }
+        }
+    };
+
+    private final BroadcastReceiver btStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (currentMode == SubViewMode.BLUETOOTH) {
+                populateBluetoothList();
+            }
+            setupBluetoothPill();
         }
     };
 
@@ -138,6 +176,22 @@ public final class QuickSettingsActivity extends Activity {
         // Register Wi-Fi scan receiver
         registerReceiver(wifiScanReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
+        // Connect to Bluetooth Profile proxies (A2DP & Headset)
+        if (bluetooth != null) {
+            try {
+                bluetooth.getProfileProxy(this, profileListener, BluetoothProfile.A2DP);
+                bluetooth.getProfileProxy(this, profileListener, BluetoothProfile.HEADSET);
+            } catch (Exception ignored) {}
+        }
+
+        // Register Bluetooth connection state broadcasts
+        IntentFilter btFilter = new IntentFilter();
+        btFilter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        btFilter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        btFilter.addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
+        btFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(btStateReceiver, btFilter);
+
         if (standBy != null) standBy.requestFocus();
     }
 
@@ -147,6 +201,15 @@ public final class QuickSettingsActivity extends Activity {
         try {
             unregisterReceiver(wifiScanReceiver);
         } catch (Exception ignored) {}
+        try {
+            unregisterReceiver(btStateReceiver);
+        } catch (Exception ignored) {}
+        if (bluetooth != null) {
+            try {
+                if (a2dpProxy != null) bluetooth.closeProfileProxy(BluetoothProfile.A2DP, a2dpProxy);
+                if (headsetProxy != null) bluetooth.closeProfileProxy(BluetoothProfile.HEADSET, headsetProxy);
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override
@@ -392,13 +455,60 @@ public final class QuickSettingsActivity extends Activity {
     }
 
     private void connectBluetoothDevice(BluetoothDevice device) {
+        String deviceName = device.getName() != null ? device.getName() : device.getAddress();
+        Toast.makeText(this, "Connecting to " + deviceName + "…", Toast.LENGTH_SHORT).show();
+
+        // 1. Try reflection via A2DP profile proxy (A2DP headsets, speakers, earbuds)
+        boolean invoked = false;
+        if (a2dpProxy != null) {
+            try {
+                Method connectMethod = a2dpProxy.getClass().getMethod("connect", BluetoothDevice.class);
+                connectMethod.setAccessible(true);
+                Object res = connectMethod.invoke(a2dpProxy, device);
+                if (Boolean.TRUE.equals(res)) {
+                    invoked = true;
+                }
+            } catch (Exception e) {
+                Log.w("QuickSettings", "a2dpProxy.connect failed: " + e.getMessage());
+            }
+        }
+
+        // 2. Try reflection via Headset profile proxy (HFP/HSP)
+        if (!invoked && headsetProxy != null) {
+            try {
+                Method connectMethod = headsetProxy.getClass().getMethod("connect", BluetoothDevice.class);
+                connectMethod.setAccessible(true);
+                Object res = connectMethod.invoke(headsetProxy, device);
+                if (Boolean.TRUE.equals(res)) {
+                    invoked = true;
+                }
+            } catch (Exception e) {
+                Log.w("QuickSettings", "headsetProxy.connect failed: " + e.getMessage());
+            }
+        }
+
+        // 3. Try hidden device.connect()
+        if (!invoked) {
+            try {
+                Method connectMethod = device.getClass().getMethod("connect");
+                connectMethod.setAccessible(true);
+                Object res = connectMethod.invoke(device);
+                if (Boolean.TRUE.equals(res)) {
+                    invoked = true;
+                }
+            } catch (Exception e) {
+                Log.w("QuickSettings", "device.connect failed: " + e.getMessage());
+            }
+        }
+
+        // 4. Always ensure connection by launching Fire TV's native INPUT_DEVICES handover
+        // which reliably triggers the system's connection coordinator for audio/input peripherals
         try {
-            // Attempt reflection connect on Android Bluetooth internals
-            Method m = device.getClass().getMethod("connect");
-            m.invoke(device);
-            Toast.makeText(this, "Connecting to " + device.getName() + "…", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent("com.amazon.device.settings.action.INPUT_DEVICES");
+            intent.setClassName("com.amazon.tv.settings.v2", "com.amazon.tv.settings.v2.tv.controllers_bluetooth_devices.ControllersAndBluetoothActivity");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
         } catch (Exception e) {
-            // Fallback to launching Fire TV Controller/BT settings
             launchBluetoothSettings();
         }
         finish();
@@ -602,7 +712,8 @@ public final class QuickSettingsActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        finish();
-        overridePendingTransition(0, 0);
+        if (isFinishing()) {
+            overridePendingTransition(0, 0);
+        }
     }
 }
