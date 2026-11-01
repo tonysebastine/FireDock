@@ -3,18 +3,27 @@ package com.appletv.launcher;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -24,20 +33,59 @@ import java.util.Set;
  * - Wi-Fi & Bluetooth stacked pills (Right)
  * - Inputs & Settings pills (Middle)
  * - Assistant, Cast, Night Mode, and Display circular quick toggles (Bottom)
+ *
+ * Direct In-Place Interactive Sub-panels:
+ * - Wi-Fi: Lists currently connected & scanned Wi-Fi networks; clicking reconnects/switches or opens credentials.
+ * - Bluetooth: Lists paired devices with connection state & battery; clicking connects/pairs or launches pairing.
  */
 public final class QuickSettingsActivity extends Activity {
 
     private WifiManager wifi;
     private BluetoothAdapter bluetooth;
 
+    private View ccPanel;
+    private View subPanel;
+    private TextView subTitle;
+    private ImageView subBtnActionIcon;
+    private View subBtnAction;
+    private View subBtnBack;
+    private TextView subBtnMore;
+    private LinearLayout subListContainer;
+
+    private enum SubViewMode { NONE, WIFI, BLUETOOTH }
+    private SubViewMode currentMode = SubViewMode.NONE;
+
+    private final BroadcastReceiver wifiScanReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (currentMode == SubViewMode.WIFI) {
+                populateWifiList();
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_quick_settings);
+
         wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         bluetooth = BluetoothAdapter.getDefaultAdapter();
 
+        ccPanel = findViewById(R.id.ccPanel);
+        subPanel = findViewById(R.id.subPanel);
+        subTitle = findViewById(R.id.subTitle);
+        subBtnActionIcon = findViewById(R.id.subBtnActionIcon);
+        subBtnAction = findViewById(R.id.subBtnAction);
+        subBtnBack = findViewById(R.id.subBtnBack);
+        subBtnMore = findViewById(R.id.subBtnMore);
+        subListContainer = findViewById(R.id.subListContainer);
+
         findViewById(R.id.scrim).setOnClickListener(v -> finish());
+
+        if (subBtnBack != null) {
+            subBtnBack.setOnClickListener(v -> showMainPanel());
+        }
 
         // 1. StandBy Tile
         View standBy = findViewById(R.id.ccStandBy);
@@ -85,6 +133,409 @@ public final class QuickSettingsActivity extends Activity {
         });
 
         // 6. Bottom Circular Action Toggles
+        setupCircularToggles();
+
+        // Register Wi-Fi scan receiver
+        registerReceiver(wifiScanReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+
+        if (standBy != null) standBy.requestFocus();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            unregisterReceiver(wifiScanReceiver);
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (currentMode != SubViewMode.NONE) {
+            showMainPanel();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    private void showMainPanel() {
+        currentMode = SubViewMode.NONE;
+        if (subPanel != null) subPanel.setVisibility(View.GONE);
+        if (ccPanel != null) {
+            ccPanel.setVisibility(View.VISIBLE);
+            View wifiView = findViewById(R.id.ccWifi);
+            if (wifiView != null) wifiView.requestFocus();
+        }
+    }
+
+    private void showWifiSubPanel() {
+        currentMode = SubViewMode.WIFI;
+        if (ccPanel != null) ccPanel.setVisibility(View.GONE);
+        if (subPanel != null) subPanel.setVisibility(View.VISIBLE);
+
+        if (subTitle != null) subTitle.setText("Wi-Fi Networks");
+        if (subBtnActionIcon != null) subBtnActionIcon.setImageResource(R.drawable.ic_refresh);
+        if (subBtnAction != null) {
+            subBtnAction.setOnClickListener(v -> {
+                if (wifi != null) {
+                    wifi.startScan();
+                    Toast.makeText(this, "Scanning for Wi-Fi…", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        if (subBtnMore != null) {
+            subBtnMore.setText("All Wi-Fi Settings…");
+            subBtnMore.setOnClickListener(v -> {
+                launchWifiSettings();
+                finish();
+            });
+        }
+
+        populateWifiList();
+        if (wifi != null) wifi.startScan();
+    }
+
+    private void populateWifiList() {
+        if (subListContainer == null) return;
+        subListContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+
+        String currentSsid = getWifiSsid();
+        boolean hasConnected = !currentSsid.equals("Off") && !currentSsid.equals("On");
+
+        // 1. Current Network if connected
+        if (hasConnected) {
+            View itemView = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+            ImageView icon = itemView.findViewById(R.id.itemIcon);
+            TextView title = itemView.findViewById(R.id.itemTitle);
+            TextView subtitle = itemView.findViewById(R.id.itemSubtitle);
+            ImageView check = itemView.findViewById(R.id.itemCheck);
+
+            if (icon != null) icon.setImageResource(R.drawable.ic_wifi);
+            if (title != null) title.setText(currentSsid);
+            if (subtitle != null) subtitle.setText("Connected");
+            if (check != null) check.setVisibility(View.VISIBLE);
+
+            itemView.setOnClickListener(v -> {
+                launchWifiSettings();
+                finish();
+            });
+            subListContainer.addView(itemView);
+        }
+
+        // 2. Saved Configured Networks (Android Internals)
+        Set<String> addedSsids = new HashSet<>();
+        if (hasConnected) addedSsids.add(currentSsid);
+
+        try {
+            List<WifiConfiguration> configs = wifi != null ? wifi.getConfiguredNetworks() : null;
+            if (configs != null) {
+                for (WifiConfiguration c : configs) {
+                    if (c.SSID == null) continue;
+                    String s = c.SSID.replace("\"", "").trim();
+                    if (s.isEmpty() || addedSsids.contains(s)) continue;
+                    addedSsids.add(s);
+
+                    View itemView = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+                    ImageView icon = itemView.findViewById(R.id.itemIcon);
+                    TextView title = itemView.findViewById(R.id.itemTitle);
+                    TextView subtitle = itemView.findViewById(R.id.itemSubtitle);
+
+                    if (icon != null) icon.setImageResource(R.drawable.ic_wifi);
+                    if (title != null) title.setText(s);
+                    if (subtitle != null) subtitle.setText("Saved");
+
+                    final int netId = c.networkId;
+                    itemView.setOnClickListener(v -> {
+                        if (wifi != null) {
+                            wifi.disconnect();
+                            wifi.enableNetwork(netId, true);
+                            wifi.reconnect();
+                            Toast.makeText(this, "Connecting to " + s + "…", Toast.LENGTH_SHORT).show();
+                        }
+                        finish();
+                    });
+                    subListContainer.addView(itemView);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. Scanned Wi-Fi Networks
+        try {
+            List<ScanResult> scans = wifi != null ? wifi.getScanResults() : null;
+            if (scans != null) {
+                for (ScanResult sr : scans) {
+                    if (sr.SSID == null) continue;
+                    String s = sr.SSID.trim();
+                    if (s.isEmpty() || addedSsids.contains(s)) continue;
+                    addedSsids.add(s);
+
+                    View itemView = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+                    ImageView icon = itemView.findViewById(R.id.itemIcon);
+                    TextView title = itemView.findViewById(R.id.itemTitle);
+                    TextView subtitle = itemView.findViewById(R.id.itemSubtitle);
+
+                    if (icon != null) icon.setImageResource(R.drawable.ic_wifi);
+                    if (title != null) title.setText(s);
+
+                    boolean isSecure = sr.capabilities != null && (sr.capabilities.contains("WPA") || sr.capabilities.contains("WEP"));
+                    if (subtitle != null) subtitle.setText(isSecure ? "Secured" : "Open");
+
+                    itemView.setOnClickListener(v -> {
+                        launchWifiSettings();
+                        finish();
+                    });
+                    subListContainer.addView(itemView);
+                    if (subListContainer.getChildCount() >= 7) break; // Keep compact
+                }
+            }
+        } catch (Exception ignored) {}
+
+        if (subListContainer.getChildCount() > 0) {
+            subListContainer.getChildAt(0).requestFocus();
+        } else if (subBtnBack != null) {
+            subBtnBack.requestFocus();
+        }
+    }
+
+    private void showBluetoothSubPanel() {
+        currentMode = SubViewMode.BLUETOOTH;
+        if (ccPanel != null) ccPanel.setVisibility(View.GONE);
+        if (subPanel != null) subPanel.setVisibility(View.VISIBLE);
+
+        if (subTitle != null) subTitle.setText("Bluetooth Devices");
+        if (subBtnActionIcon != null) subBtnActionIcon.setImageResource(R.drawable.ic_add);
+        if (subBtnAction != null) {
+            subBtnAction.setOnClickListener(v -> {
+                launchPairNewBluetooth();
+                finish();
+            });
+        }
+        if (subBtnMore != null) {
+            subBtnMore.setText("Controllers & Bluetooth…");
+            subBtnMore.setOnClickListener(v -> {
+                launchBluetoothSettings();
+                finish();
+            });
+        }
+
+        populateBluetoothList();
+    }
+
+    private void populateBluetoothList() {
+        if (subListContainer == null) return;
+        subListContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+
+        if (bluetooth == null || !bluetooth.isEnabled()) {
+            TextView empty = new TextView(this);
+            empty.setText("Bluetooth is turned off.");
+            empty.setTextColor(0x80FFFFFF);
+            empty.setPadding(16, 16, 16, 16);
+            subListContainer.addView(empty);
+            if (subBtnBack != null) subBtnBack.requestFocus();
+            return;
+        }
+
+        Set<BluetoothDevice> paired = bluetooth.getBondedDevices();
+        if (paired != null && !paired.isEmpty()) {
+            for (BluetoothDevice d : paired) {
+                View itemView = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+                ImageView icon = itemView.findViewById(R.id.itemIcon);
+                TextView title = itemView.findViewById(R.id.itemTitle);
+                TextView subtitle = itemView.findViewById(R.id.itemSubtitle);
+                ImageView check = itemView.findViewById(R.id.itemCheck);
+
+                if (icon != null) icon.setImageResource(R.drawable.ic_bluetooth);
+                String name = d.getName() != null ? d.getName() : d.getAddress();
+                if (title != null) title.setText(name);
+
+                boolean isConnected = isBluetoothDeviceConnected(d);
+                int battery = getDeviceBattery(d);
+                StringBuilder status = new StringBuilder();
+                if (isConnected) {
+                    status.append("Connected");
+                    if (battery >= 0) status.append(" • ").append(battery).append("%");
+                    if (check != null) check.setVisibility(View.VISIBLE);
+                } else {
+                    status.append("Paired");
+                }
+                if (subtitle != null) subtitle.setText(status.toString());
+
+                itemView.setOnClickListener(v -> {
+                    connectBluetoothDevice(d);
+                });
+                subListContainer.addView(itemView);
+            }
+        } else {
+            TextView empty = new TextView(this);
+            empty.setText("No paired Bluetooth devices.");
+            empty.setTextColor(0x80FFFFFF);
+            empty.setPadding(16, 16, 16, 16);
+            subListContainer.addView(empty);
+        }
+
+        if (subListContainer.getChildCount() > 0) {
+            subListContainer.getChildAt(0).requestFocus();
+        } else if (subBtnBack != null) {
+            subBtnBack.requestFocus();
+        }
+    }
+
+    private boolean isBluetoothDeviceConnected(BluetoothDevice device) {
+        try {
+            Method m = device.getClass().getMethod("isConnected");
+            Object res = m.invoke(device);
+            if (res instanceof Boolean) return (Boolean) res;
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private void connectBluetoothDevice(BluetoothDevice device) {
+        try {
+            // Attempt reflection connect on Android Bluetooth internals
+            Method m = device.getClass().getMethod("connect");
+            m.invoke(device);
+            Toast.makeText(this, "Connecting to " + device.getName() + "…", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            // Fallback to launching Fire TV Controller/BT settings
+            launchBluetoothSettings();
+        }
+        finish();
+    }
+
+    private void launchWifiSettings() {
+        Intent intent = new Intent();
+        intent.setClassName("com.amazon.tv.settings.v2", "com.amazon.tv.settings.v2.tv.network.NetworkActivity");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+        } catch (Exception e1) {
+            try {
+                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e2) {
+                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void launchBluetoothSettings() {
+        Intent intent = new Intent();
+        intent.setClassName("com.amazon.tv.settings.v2", "com.amazon.tv.settings.v2.tv.controllers_bluetooth_devices.ControllersAndBluetoothActivity");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+        } catch (Exception e1) {
+            try {
+                startActivity(new Intent("android.settings.CONTROLLERS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e2) {
+                try {
+                    startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (Exception e3) {
+                    Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+    }
+
+    private void launchPairNewBluetooth() {
+        Intent intent = new Intent("com.amazon.device.settings.action.DISCOVER_INPUT_DEVICE");
+        intent.setClassName("com.amazon.tv.settings.v2", "com.amazon.tv.settings.v2.tv.controllers_bluetooth_devices.ControllersAndBluetoothActivity");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            launchBluetoothSettings();
+        }
+    }
+
+    private void setupPill(int containerId, int iconRes, String title, String subtitle, View.OnClickListener click) {
+        View container = findViewById(containerId);
+        if (container == null) return;
+        ImageView icon = container.findViewById(R.id.pillIcon);
+        TextView txtTitle = container.findViewById(R.id.pillTitle);
+        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
+
+        if (icon != null) icon.setImageResource(iconRes);
+        if (txtTitle != null) txtTitle.setText(title);
+        if (txtSubtitle != null) txtSubtitle.setText(subtitle);
+
+        container.setOnClickListener(click);
+    }
+
+    private void setupWifiPill() {
+        View container = findViewById(R.id.ccWifi);
+        if (container == null) return;
+        ImageView icon = container.findViewById(R.id.pillIcon);
+        TextView txtTitle = container.findViewById(R.id.pillTitle);
+        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
+
+        if (icon != null) icon.setImageResource(R.drawable.ic_wifi);
+        if (txtTitle != null) txtTitle.setText("Wi-Fi");
+
+        String ssid = getWifiSsid();
+        if (txtSubtitle != null) txtSubtitle.setText(ssid);
+
+        container.setOnClickListener(v -> showWifiSubPanel());
+    }
+
+    private String getWifiSsid() {
+        if (wifi == null || !wifi.isWifiEnabled()) return "Off";
+        WifiInfo info = wifi.getConnectionInfo();
+        if (info != null && info.getSSID() != null) {
+            String s = info.getSSID().replace("\"", "").trim();
+            if (!s.isEmpty() && !s.contains("unknown") && !s.equals("0x")) return s;
+        }
+        return "On";
+    }
+
+    private void setupBluetoothPill() {
+        View container = findViewById(R.id.ccBluetooth);
+        if (container == null) return;
+        ImageView icon = container.findViewById(R.id.pillIcon);
+        TextView txtTitle = container.findViewById(R.id.pillTitle);
+        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
+
+        if (icon != null) icon.setImageResource(R.drawable.ic_bluetooth);
+        if (txtTitle != null) txtTitle.setText("Bluetooth");
+
+        String btStatus = getBluetoothSummary();
+        if (txtSubtitle != null) txtSubtitle.setText(btStatus);
+
+        container.setOnClickListener(v -> showBluetoothSubPanel());
+    }
+
+    private String getBluetoothSummary() {
+        if (bluetooth == null || !bluetooth.isEnabled()) return "Off";
+        try {
+            Set<BluetoothDevice> paired = bluetooth.getBondedDevices();
+            if (paired == null || paired.isEmpty()) return "Ready";
+            for (BluetoothDevice d : paired) {
+                if (isBluetoothDeviceConnected(d)) {
+                    int battery = getDeviceBattery(d);
+                    String name = d.getName() != null ? d.getName() : "Device";
+                    return battery >= 0 ? name + " " + battery + "%" : name;
+                }
+            }
+            return paired.size() + " Paired";
+        } catch (Exception e) {
+            return "On";
+        }
+    }
+
+    private int getDeviceBattery(BluetoothDevice d) {
+        try {
+            Method m = d.getClass().getMethod("getBatteryLevel");
+            Object res = m.invoke(d);
+            if (res instanceof Integer) {
+                int level = (Integer) res;
+                if (level >= 0) return level;
+            }
+        } catch (Exception ignored) {}
+        return -1;
+    }
+
+    private void setupCircularToggles() {
         // Assistant
         View btnAssistant = findViewById(R.id.btnAssistant);
         if (btnAssistant != null) {
@@ -107,7 +558,6 @@ public final class QuickSettingsActivity extends Activity {
         if (btnCast != null) {
             btnCast.setOnClickListener(v -> {
                 try {
-                    // Try wireless display / casting settings
                     startActivity(new Intent("android.settings.CAST_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 } catch (Exception e) {
                     try {
@@ -141,114 +591,6 @@ public final class QuickSettingsActivity extends Activity {
                 finish();
             });
         }
-
-        // Set initial focus to StandBy
-        if (standBy != null) standBy.requestFocus();
-    }
-
-    private void setupPill(int containerId, int iconRes, String title, String subtitle, View.OnClickListener click) {
-        View container = findViewById(containerId);
-        if (container == null) return;
-        ImageView icon = container.findViewById(R.id.pillIcon);
-        TextView txtTitle = container.findViewById(R.id.pillTitle);
-        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
-
-        if (icon != null) icon.setImageResource(iconRes);
-        if (txtTitle != null) txtTitle.setText(title);
-        if (txtSubtitle != null) txtSubtitle.setText(subtitle);
-
-        container.setOnClickListener(click);
-    }
-
-    private void setupWifiPill() {
-        View container = findViewById(R.id.ccWifi);
-        if (container == null) return;
-        ImageView icon = container.findViewById(R.id.pillIcon);
-        TextView txtTitle = container.findViewById(R.id.pillTitle);
-        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
-
-        if (icon != null) icon.setImageResource(R.drawable.ic_wifi);
-        if (txtTitle != null) txtTitle.setText("Wi-Fi");
-
-        String ssid = getWifiSsid();
-        if (txtSubtitle != null) txtSubtitle.setText(ssid);
-
-        container.setOnClickListener(v -> {
-            try {
-                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                finish();
-            } catch (Exception e) {
-                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private String getWifiSsid() {
-        if (wifi == null || !wifi.isWifiEnabled()) return "Off";
-        WifiInfo info = wifi.getConnectionInfo();
-        if (info != null && info.getSSID() != null) {
-            String s = info.getSSID().replace("\"", "").trim();
-            if (!s.isEmpty() && !s.contains("unknown") && !s.equals("0x")) return s;
-        }
-        return "On";
-    }
-
-    private void setupBluetoothPill() {
-        View container = findViewById(R.id.ccBluetooth);
-        if (container == null) return;
-        ImageView icon = container.findViewById(R.id.pillIcon);
-        TextView txtTitle = container.findViewById(R.id.pillTitle);
-        TextView txtSubtitle = container.findViewById(R.id.pillSubtitle);
-
-        if (icon != null) icon.setImageResource(R.drawable.ic_settings);
-        if (txtTitle != null) txtTitle.setText("Bluetooth");
-
-        String btStatus = getBluetoothSummary();
-        if (txtSubtitle != null) txtSubtitle.setText(btStatus);
-
-        container.setOnClickListener(v -> {
-            try {
-                startActivity(new Intent("android.settings.CONTROLLERS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                finish();
-            } catch (Exception e) {
-                try {
-                    startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                    finish();
-                } catch (Exception ignored) {
-                    Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-    }
-
-    private String getBluetoothSummary() {
-        if (bluetooth == null || !bluetooth.isEnabled()) return "Off";
-        try {
-            Set<BluetoothDevice> paired = bluetooth.getBondedDevices();
-            if (paired == null || paired.isEmpty()) return "Ready";
-            for (BluetoothDevice d : paired) {
-                int battery = getDeviceBattery(d);
-                if (battery >= 0) {
-                    String name = d.getName();
-                    return (name != null ? name : "Audio") + " " + battery + "%";
-                }
-            }
-            return paired.size() + " Connected";
-        } catch (Exception e) {
-            return "On";
-        }
-    }
-
-    private int getDeviceBattery(BluetoothDevice d) {
-        try {
-            Method m = d.getClass().getMethod("getBatteryLevel");
-            Object res = m.invoke(d);
-            if (res instanceof Integer) {
-                int level = (Integer) res;
-                if (level >= 0) return level;
-            }
-        } catch (Exception ignored) {}
-        return -1;
     }
 
     @Override

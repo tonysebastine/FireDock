@@ -3,13 +3,15 @@
      - Header: TextClock (1:50 am) + User/Remote status pills
      - Top row: StandBy large square card (left) + Wi-Fi & Bluetooth stacked pills (right)
      - Middle row: Inputs (left) + Settings (right)
-     - Bottom row: Round circular action buttons (Assistant, AirPlay/Cast, Dark Mode, Display) -->
+     - Bottom row: Round circular action buttons (Assistant, AirPlay/Cast, Dark Mode, Display)
+     - Interactive Detail Subviews: Wi-Fi networks list, Bluetooth paired & connectable list -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/scrim"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/tvos_overlay">
 
+    <!-- Primary Control Center Glass Platter -->
     <LinearLayout
         android:id="@+id/ccPanel"
         android:layout_width="290dp"
@@ -228,5 +230,107 @@
                     android:contentDescription="Display" />
             </FrameLayout>
         </LinearLayout>
+    </LinearLayout>
+
+    <!-- Sub-Panel: Detailed Wi-Fi / Bluetooth List Overlay -->
+    <LinearLayout
+        android:id="@+id/subPanel"
+        android:layout_width="310dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="32dp"
+        android:orientation="vertical"
+        android:background="@drawable/glass_panel"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="20dp">
+
+        <!-- Sub-panel Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:id="@+id/subBtnBack"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_back"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="Back" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/subTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:text="Wi-Fi"
+                android:textSize="16sp"
+                android:textColor="#FFFFFFFF"
+                android:fontFamily="sans-serif-medium" />
+
+            <!-- Action button (e.g. Scan / Pair new) -->
+            <FrameLayout
+                android:id="@+id/subBtnAction"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:id="@+id/subBtnActionIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_refresh"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="Action" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Scrollable list of items -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="280dp"
+            android:layout_marginTop="12dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/subListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <!-- Footer Button: More Settings -->
+        <TextView
+            android:id="@+id/subBtnMore"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Wi-Fi Settings…"
+            android:textSize="13sp"
+            android:textColor="@drawable/pill_text"
+            android:fontFamily="sans-serif-medium"
+            android:background="@drawable/qs_sub_item_bg"
+            android:focusable="true"
+            android:clickable="true" />
     </LinearLayout>
 </FrameLayout>

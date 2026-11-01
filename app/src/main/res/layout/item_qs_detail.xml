@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/qs_sub_item_bg"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:layout_marginBottom="6dp"
+    android:focusable="true"
+    android:clickable="true">
+
+    <ImageView
+        android:id="@+id/itemIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_wifi"
+        android:tint="@drawable/pill_text"
+        android:duplicateParentState="true"
+        android:contentDescription="@null" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="10dp"
+        android:duplicateParentState="true">
+
+        <TextView
+            android:id="@+id/itemTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Network Name"
+            android:textSize="13sp"
+            android:textColor="@drawable/pill_text"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:duplicateParentState="true" />
+
+        <TextView
+            android:id="@+id/itemSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Connected"
+            android:textSize="10.5sp"
+            android:textColor="@drawable/pill_text_mid"
+            android:fontFamily="sans-serif"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:duplicateParentState="true" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/itemCheck"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:src="@drawable/ic_check"
+        android:tint="@drawable/pill_text"
+        android:duplicateParentState="true"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+</LinearLayout>
