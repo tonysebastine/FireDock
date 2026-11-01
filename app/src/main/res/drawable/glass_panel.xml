@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- tvOS 18 Platter material (Control Center, menus, alerts): r48px, 1px white 10% edge.
-     The kit blurs the backdrop 50px under #1E1E1E @50%; without a window blur this uses an 85% fill. -->
+<!-- Multi-layered Apple tvOS specular frosted glass platter:
+     Layer 1: Frosted gradient fill
+     Layer 2: Top specular gleam / highlight
+     Layer 3: 1dp translucent white perimeter stroke -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/tvos_material" />
-            <stroke android:width="0.5dp" android:color="@color/tvos_material_stroke" />
+            <gradient
+                android:angle="270"
+                android:startColor="#3DFFFFFF"
+                android:centerColor="#26FFFFFF"
+                android:endColor="#1FFFFFFF" />
+            <corners android:radius="@dimen/tvos_panel_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#2BFFFFFF"
+                android:centerColor="#08FFFFFF"
+                android:endColor="#00000000" />
+            <corners android:radius="@dimen/tvos_panel_radius" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <stroke android:width="1dp" android:color="#4DFFFFFF" />
             <corners android:radius="@dimen/tvos_panel_radius" />
         </shape>
     </item>

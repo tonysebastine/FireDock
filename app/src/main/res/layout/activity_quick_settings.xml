@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Quick settings opened by the remote's Settings button, as the tvOS 18 Control Center: the screen dims
-     30% and a 480px (240dp) platter sits under the menu bar, top 136px, right margin 50px, as in the kit. -->
+<!-- Apple tvOS 18 Control Center layout mirroring tvOS Launcher 2.0.5:
+     - Header: TextClock (1:50 am) + User/Remote status pills
+     - Top row: StandBy large square card (left) + Wi-Fi & Bluetooth stacked pills (right)
+     - Middle row: Inputs (left) + Settings (right)
+     - Bottom row: Round circular action buttons (Assistant, AirPlay/Cast, Dark Mode, Display) -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/scrim"
     android:layout_width="match_parent"
@@ -8,24 +11,222 @@
     android:background="@color/tvos_overlay">
 
     <LinearLayout
-        android:id="@+id/panel"
-        android:layout_width="@dimen/tvos_cc_width"
+        android:id="@+id/ccPanel"
+        android:layout_width="290dp"
         android:layout_height="wrap_content"
         android:layout_gravity="top|end"
-        android:layout_marginTop="68dp"
-        android:layout_marginEnd="25dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="32dp"
         android:orientation="vertical"
         android:background="@drawable/glass_panel"
-        android:padding="@dimen/tvos_panel_padding"
+        android:padding="14dp"
         android:clipChildren="false"
         android:clipToPadding="false"
-        android:elevation="12dp">
+        android:elevation="16dp">
 
+        <!-- Header: TextClock + User Icons -->
         <LinearLayout
-            android:id="@+id/rows"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:clipChildren="false">
+
+            <TextClock
+                android:id="@+id/ccTime"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="15sp"
+                android:textColor="#FFFFFFFF"
+                android:fontFamily="sans-serif-medium"
+                android:format12Hour="h:mm a"
+                android:format24Hour="H:mm" />
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:background="@drawable/cc_glass_round"
+                android:padding="5dp"
+                android:src="@drawable/ic_settings"
+                android:contentDescription="@null" />
+        </LinearLayout>
+
+        <!-- Top Block: StandBy large tile (Left) + Wi-Fi & Bluetooth (Right) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:clipChildren="false" />
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:clipChildren="false">
+
+            <!-- StandBy Hero Tile -->
+            <LinearLayout
+                android:id="@+id/ccStandBy"
+                android:layout_width="0dp"
+                android:layout_height="82dp"
+                android:layout_weight="1"
+                android:background="@drawable/cc_glass_tile"
+                android:focusable="true"
+                android:clickable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_standby"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="StandBy"
+                    android:textSize="12sp"
+                    android:textColor="@drawable/pill_text"
+                    android:fontFamily="sans-serif-medium"
+                    android:duplicateParentState="true" />
+            </LinearLayout>
+
+            <!-- Wi-Fi & Bluetooth Stacked Pills -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="82dp"
+                android:layout_weight="1.2"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical"
+                android:clipChildren="false">
+
+                <!-- Wi-Fi Pill -->
+                <include
+                    android:id="@+id/ccWifi"
+                    layout="@layout/item_cc_pill"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Bluetooth Pill -->
+                <include
+                    android:id="@+id/ccBluetooth"
+                    layout="@layout/item_cc_pill"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Mid Row: Inputs & Settings -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:clipChildren="false">
+
+            <include
+                android:id="@+id/ccInputs"
+                layout="@layout/item_cc_pill"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <include
+                android:id="@+id/ccSettings"
+                layout="@layout/item_cc_pill"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+
+        <!-- Bottom Row: 4 Circular Quick Toggles -->
+        <LinearLayout
+            android:id="@+id/ccRoundRow"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="12dp"
+            android:clipChildren="false">
+
+            <!-- Assistant / Mic -->
+            <FrameLayout
+                android:id="@+id/btnAssistant"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_assistant"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="Assistant" />
+            </FrameLayout>
+
+            <!-- AirPlay / Cast -->
+            <FrameLayout
+                android:id="@+id/btnCast"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_cast"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="AirPlay Cast" />
+            </FrameLayout>
+
+            <!-- Dark Mode / Night -->
+            <FrameLayout
+                android:id="@+id/btnDarkMode"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_darkmode"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="Night Mode" />
+            </FrameLayout>
+
+            <!-- Display / Picture -->
+            <FrameLayout
+                android:id="@+id/btnDisplay"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/cc_glass_round"
+                android:focusable="true"
+                android:clickable="true">
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_display"
+                    android:tint="@drawable/pill_text"
+                    android:duplicateParentState="true"
+                    android:contentDescription="Display" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>
