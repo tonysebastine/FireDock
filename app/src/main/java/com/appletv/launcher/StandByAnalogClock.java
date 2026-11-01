@@ -21,11 +21,22 @@ import java.util.Calendar;
  */
 public class StandByAnalogClock extends View {
 
-    private final Paint dialPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint hourHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint minuteHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint secondHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint centerCapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint dialPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint hourHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint minuteHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint secondHandPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint centerCapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+
+    // Precomputed unit circle values for 60 ticks (sin, cos) to avoid runtime trigonometry in onDraw
+    private static final float[] TICK_SIN = new float[60];
+    private static final float[] TICK_COS = new float[60];
+    static {
+        for (int i = 0; i < 60; i++) {
+            double angle = i * Math.PI * 2 / 60.0;
+            TICK_SIN[i] = (float) Math.sin(angle);
+            TICK_COS[i] = (float) Math.cos(angle);
+        }
+    }
 
     private int primaryColor = 0xFFFFFFFF;
     private int accentColor = 0xFFFF453A; // Apple vibrant orange-red
@@ -80,12 +91,11 @@ public class StandByAnalogClock extends View {
         float cy = height / 2.0f;
         float radius = Math.min(cx, cy) - 16.0f;
 
-        // 1. Draw Hour and Minute ticks
+        // 1. Draw Hour and Minute ticks using precomputed trig vectors
         dialPaint.setStyle(Paint.Style.STROKE);
         for (int i = 0; i < 60; i++) {
-            float angle = (float) (i * Math.PI * 2 / 60);
-            float cos = (float) Math.cos(angle);
-            float sin = (float) Math.sin(angle);
+            float sin = TICK_SIN[i];
+            float cos = TICK_COS[i];
 
             if (i % 5 == 0) {
                 // Major hour marker

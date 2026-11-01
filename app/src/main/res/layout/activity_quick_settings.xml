@@ -309,13 +309,18 @@
             android:layout_height="wrap_content"
             android:maxHeight="280dp"
             android:layout_marginTop="12dp"
-            android:scrollbars="none">
+            android:scrollbars="none"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:descendantFocusability="afterDescendants">
 
             <LinearLayout
                 android:id="@+id/subListContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false" />
         </ScrollView>
 
         <!-- Footer Button: More Settings -->

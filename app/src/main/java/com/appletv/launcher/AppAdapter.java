@@ -1,5 +1,7 @@
 package com.appletv.launcher;
 
+import java.io.File;
+
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -151,7 +153,21 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     void reload(List<Cards.Card> cards) {
         PackageManager pm = ctx.getPackageManager();
         Intent probe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
-        List<ResolveInfo> found = pm.queryIntentActivities(probe, 0);
+        List<ResolveInfo> found = new ArrayList<>(pm.queryIntentActivities(probe, 0));
+
+        // Also discover standard mobile/sideloaded launcher apps (e.g. Chiaki)
+        Intent standardProbe = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> standardFound = pm.queryIntentActivities(standardProbe, 0);
+        Set<String> seen = new HashSet<>();
+        for (ResolveInfo ri : found) {
+            if (ri.activityInfo != null) seen.add(ri.activityInfo.packageName);
+        }
+        for (ResolveInfo ri : standardFound) {
+            if (ri.activityInfo != null && !seen.contains(ri.activityInfo.packageName)) {
+                found.add(ri);
+                seen.add(ri.activityInfo.packageName);
+            }
+        }
         Map<String, Cards.Card> cardByPkg = new HashMap<>();
         for (Cards.Card c : cards) cardByPkg.put(c.pkg, c);
         List<Entry> fresh = new ArrayList<>();
@@ -280,12 +296,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
-            }
+            showAppMenu(e, position);
             return true;
         });
     }
@@ -298,7 +309,6 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             return;
         }
         Intent i = new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
                 .setComponent(e.component)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         try {
@@ -408,7 +418,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         return 15f * density * Math.min(1f, tileWidthPx / (DESIGN_W_DP * density));
     }
 
-    static final class Holder extends RecyclerView.ViewHolder {
+    final class Holder extends RecyclerView.ViewHolder {
         final View card;
         final ImageView banner;
         final ImageView icon;
@@ -442,9 +452,15 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
 
             card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                int pos = getBindingAdapterPosition();
+                if (keyCode == KeyEvent.KEYCODE_MENU) {
+                    if (pos != RecyclerView.NO_POSITION && pos < items.size()) {
+                        showAppMenu(items.get(pos), pos);
+                        return true;
+                    }
+                }
                 if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN
                         && keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
-                int pos = getBindingAdapterPosition();
                 return listener != null && pos != RecyclerView.NO_POSITION && listener.onTileVerticalKey(pos, keyCode);
             });
 
@@ -491,6 +507,112 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
                     listener.onTileFocused(pos, view);
                 }
             });
+        }
+    }
+
+    private void showAppMenu(Entry e, int position) {
+        if (e.pkg == null || e.kind == Entry.EMPTY) return;
+        boolean isPinned = favourites.contains(e.pkg);
+        List<String> options = new ArrayList<>();
+        options.add("Open " + e.label);
+        if (isPinned) {
+            options.add("Move Left in Dock");
+            options.add("Move Right in Dock");
+            options.add("Unpin from Dock");
+        } else {
+            options.add("Pin to Dock");
+        }
+        options.add("Hide from Home");
+        options.add("App Info / Settings");
+
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(ctx);
+        builder.setTitle(e.label);
+        builder.setItems(options.toArray(new CharSequence[0]), (dialog, which) -> {
+            String choice = options.get(which);
+            if (choice.startsWith("Open")) {
+                launch(e);
+            } else if ("Pin to Dock".equals(choice)) {
+                pinApp(e.pkg);
+            } else if ("Unpin from Dock".equals(choice)) {
+                unpinApp(e.pkg);
+            } else if ("Move Left in Dock".equals(choice)) {
+                moveDockApp(e.pkg, -1);
+            } else if ("Move Right in Dock".equals(choice)) {
+                moveDockApp(e.pkg, 1);
+            } else if ("Hide from Home".equals(choice)) {
+                hideApp(e.pkg);
+            } else if ("App Info / Settings".equals(choice)) {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    ctx.startActivity(i);
+                } catch (Exception ignored) {}
+            }
+        });
+        builder.show();
+    }
+
+    private void pinApp(String pkg) {
+        if (!favourites.contains(pkg)) {
+            favourites.add(pkg);
+            saveDockAndReload();
+        }
+    }
+
+    private void unpinApp(String pkg) {
+        if (favourites.remove(pkg)) {
+            saveDockAndReload();
+        }
+    }
+
+    private void moveDockApp(String pkg, int delta) {
+        int idx = favourites.indexOf(pkg);
+        if (idx < 0) return;
+        int target = idx + delta;
+        if (target >= 0 && target < favourites.size()) {
+            Collections.swap(favourites, idx, target);
+            saveDockAndReload();
+        }
+    }
+
+    private void hideApp(String pkg) {
+        hidden.add(pkg);
+        favourites.remove(pkg);
+        saveDockAndReload();
+        Toast.makeText(ctx, "App hidden from Home", Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveDockAndReload() {
+        try {
+            File dir = Config.dir(ctx);
+            if (dir != null) {
+                File file = new File(dir, Config.FILE_NAME);
+                org.json.JSONObject json = new org.json.JSONObject();
+                if (file.exists() && file.isFile()) {
+                    try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
+                        byte[] data = new byte[(int) file.length()];
+                        int readLen = fis.read(data);
+                        if (readLen > 0) {
+                            json = new org.json.JSONObject(new String(data, 0, readLen, java.nio.charset.StandardCharsets.UTF_8));
+                        }
+                    } catch (Exception ignored) {}
+                }
+                org.json.JSONArray dockArr = new org.json.JSONArray();
+                for (String p : favourites) dockArr.put(p);
+                json.put("dock_apps", dockArr);
+                org.json.JSONArray hideArr = new org.json.JSONArray();
+                for (String p : hidden) hideArr.put(p);
+                json.put("hidden_apps", hideArr);
+
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(file)) {
+                    fos.write(json.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e("AppAdapter", "Failed to persist dock changes: " + e.getMessage());
+        }
+        if (ctx instanceof MainActivity) {
+            ((MainActivity) ctx).recreate();
         }
     }
 }
