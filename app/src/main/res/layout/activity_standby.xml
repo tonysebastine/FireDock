@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/standbyRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- Ambient Radial Glow (shifts position & hue smoothly) -->
+    <View
+        android:id="@+id/standbyAmbientGlow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Container for Burn-In Prevention Drift -->
+    <FrameLayout
+        android:id="@+id/standbyContentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <!-- MODE 0: Dual Widget Mode (iOS StandBy Split View) -->
+        <LinearLayout
+            android:id="@+id/viewDualWidgets"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:baselineAligned="false"
+            android:paddingStart="48dp"
+            android:paddingEnd="48dp">
+
+            <!-- LEFT WIDGET: Giant Digital Clock + Calendar -->
+            <LinearLayout
+                android:id="@+id/widgetLeft"
+                android:layout_width="0dp"
+                android:layout_height="320dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="28dp"
+                android:background="@drawable/glass_panel"
+                android:padding="28dp"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="true"
+                    android:gravity="center">
+
+                    <TextClock
+                        android:id="@+id/standbyClockHours"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:format12Hour="h:mm"
+                        android:format24Hour="HH:mm"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="96sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="-0.04"
+                        android:includeFontPadding="false"
+                        android:shadowColor="#80000000"
+                        android:shadowDy="4"
+                        android:shadowRadius="16" />
+
+                    <TextClock
+                        android:id="@+id/standbyClockAmPm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:format12Hour="a"
+                        android:format24Hour=""
+                        android:textColor="#AAFFFFFF"
+                        android:textSize="28sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:includeFontPadding="false" />
+                </LinearLayout>
+
+                <TextClock
+                    android:id="@+id/standbyDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:format12Hour="EEEE, MMMM d"
+                    android:format24Hour="EEEE, d MMMM"
+                    android:textColor="#DDFFFFFF"
+                    android:textSize="22sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.01" />
+
+                <!-- Status pill: Wi-Fi + Connected Audio -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/cc_glass_tile"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp">
+
+                    <ImageView
+                        android:id="@+id/standbyWifiIcon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_wifi"
+                        android:tint="#FFFFFFFF"
+                        android:contentDescription="@null" />
+
+                    <TextView
+                        android:id="@+id/standbyStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Online • FireDock"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- RIGHT WIDGET: Apple Watch Analog Dial OR Weather/World Glances -->
+            <FrameLayout
+                android:id="@+id/widgetRightContainer"
+                android:layout_width="0dp"
+                android:layout_height="320dp"
+                android:layout_weight="1"
+                android:layout_marginStart="28dp"
+                android:background="@drawable/glass_panel"
+                android:padding="20dp">
+
+                <!-- 1. Analog Face -->
+                <com.appletv.launcher.StandByAnalogClock
+                    android:id="@+id/standbyAnalogClock"
+                    android:layout_width="280dp"
+                    android:layout_height="280dp"
+                    android:layout_gravity="center" />
+
+                <!-- 2. Weather & World Info Overlay Card -->
+                <LinearLayout
+                    android:id="@+id/standbyGlanceInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/cc_glass_tile"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:layout_margin="12dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_weather_cloud"
+                        android:tint="#FFFF9F0A"
+                        android:contentDescription="@null" />
+
+                    <TextView
+                        android:id="@+id/standbyWeatherCity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="24°C • Fair"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- MODE 1: Full-Screen Minimalist Bold Digital Face -->
+        <LinearLayout
+            android:id="@+id/viewFullScreenDigital"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="true"
+                android:gravity="center">
+
+                <TextClock
+                    android:id="@+id/fullBigClock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="HH:mm"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="170sp"
+                    android:fontFamily="sans-serif-thin"
+                    android:letterSpacing="-0.03"
+                    android:includeFontPadding="false"
+                    android:shadowColor="#99000000"
+                    android:shadowDy="6"
+                    android:shadowRadius="24" />
+
+                <TextClock
+                    android:id="@+id/fullBigAmPm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:format12Hour="a"
+                    android:format24Hour=""
+                    android:textColor="#AAFFFFFF"
+                    android:textSize="36sp"
+                    android:fontFamily="sans-serif-light"
+                    android:includeFontPadding="false" />
+            </LinearLayout>
+
+            <TextClock
+                android:id="@+id/fullBigDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:format12Hour="EEEE, MMMM d"
+                android:format24Hour="EEEE, d MMMM"
+                android:textColor="#DDFFFFFF"
+                android:textSize="30sp"
+                android:fontFamily="sans-serif-light"
+                android:letterSpacing="0.02" />
+        </LinearLayout>
+
+        <!-- Hint bar at bottom (subtle fade out) -->
+        <TextView
+            android:id="@+id/standbyHintText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:text="Press Left/Right to Switch Style • Menu for Night Mode • Any Key to Exit"
+            android:textColor="#55FFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.02" />
+
+    </FrameLayout>
+</FrameLayout>

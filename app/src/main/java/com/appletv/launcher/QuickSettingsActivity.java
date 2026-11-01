@@ -130,10 +130,10 @@ public final class QuickSettingsActivity extends Activity {
         if (standBy != null) {
             standBy.setOnClickListener(v -> {
                 try {
-                    startActivity(new Intent(this, ClockDream.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    startActivity(new Intent(this, StandByActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 } catch (Exception e) {
                     try {
-                        startService(new Intent(this, ClockDream.class));
+                        startActivity(new Intent(this, ClockDream.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                     } catch (Exception ignored) {}
                 }
                 finish();
