@@ -56,7 +56,7 @@ public final class QuickSettingsActivity extends Activity {
     private TextView subBtnMore;
     private LinearLayout subListContainer;
 
-    private enum SubViewMode { NONE, WIFI, BLUETOOTH }
+    private enum SubViewMode { NONE, WIFI, BLUETOOTH, SETTINGS }
     private SubViewMode currentMode = SubViewMode.NONE;
 
     private BluetoothProfile a2dpProxy;
@@ -161,13 +161,8 @@ public final class QuickSettingsActivity extends Activity {
         });
 
         // 5. Settings Pill
-        setupPill(R.id.ccSettings, R.drawable.ic_settings, "Settings", "System", v -> {
-            try {
-                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            } catch (Exception e) {
-                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
-            }
-            finish();
+        setupPill(R.id.ccSettings, R.drawable.ic_settings, "Settings", "Preferences", v -> {
+            showSettingsSubPanel();
         });
 
         // 6. Bottom Circular Action Toggles
@@ -360,6 +355,96 @@ public final class QuickSettingsActivity extends Activity {
             subBtnBack.requestFocus();
         }
     }
+
+    private void showSettingsSubPanel() {
+        currentMode = SubViewMode.SETTINGS;
+        if (ccPanel != null) ccPanel.setVisibility(View.GONE);
+        if (subPanel != null) subPanel.setVisibility(View.VISIBLE);
+
+        if (subTitle != null) subTitle.setText("Settings");
+        if (subBtnActionIcon != null) subBtnActionIcon.setImageResource(R.drawable.ic_settings);
+        if (subBtnAction != null) {
+            subBtnAction.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (Exception ignored) {}
+                finish();
+            });
+        }
+        if (subBtnMore != null) {
+            subBtnMore.setText("System Settings…");
+            subBtnMore.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (Exception ignored) {}
+                finish();
+            });
+        }
+
+        populateSettingsList();
+    }
+
+    private void populateSettingsList() {
+        if (subListContainer == null) return;
+        subListContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+
+        // Option 1: FireDock Launcher Settings (Wallpapers, Columns, Animations)
+        View itemLauncher = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+        ImageView iconLauncher = itemLauncher.findViewById(R.id.itemIcon);
+        TextView titleLauncher = itemLauncher.findViewById(R.id.itemTitle);
+        TextView subtitleLauncher = itemLauncher.findViewById(R.id.itemSubtitle);
+        if (iconLauncher != null) iconLauncher.setImageResource(R.drawable.ic_home_settings);
+        if (titleLauncher != null) titleLauncher.setText("Launcher Settings");
+        if (subtitleLauncher != null) subtitleLauncher.setText("Wallpapers, layout, grid & animations");
+        itemLauncher.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(this, LauncherSettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                Toast.makeText(this, "Launcher settings unavailable", Toast.LENGTH_SHORT).show();
+            }
+            finish();
+        });
+        subListContainer.addView(itemLauncher);
+
+        // Option 2: Android TV / Fire TV System Settings
+        View itemSystem = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+        ImageView iconSystem = itemSystem.findViewById(R.id.itemIcon);
+        TextView titleSystem = itemSystem.findViewById(R.id.itemTitle);
+        TextView subtitleSystem = itemSystem.findViewById(R.id.itemSubtitle);
+        if (iconSystem != null) iconSystem.setImageResource(R.drawable.ic_settings);
+        if (titleSystem != null) titleSystem.setText("System Settings");
+        if (subtitleSystem != null) subtitleSystem.setText("Device, display, audio, accounts & apps");
+        itemSystem.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+            }
+            finish();
+        });
+        subListContainer.addView(itemSystem);
+
+        // Option 3: StandBy Screensaver Preferences
+        View itemStandBy = inflater.inflate(R.layout.item_qs_detail, subListContainer, false);
+        ImageView iconStandBy = itemStandBy.findViewById(R.id.itemIcon);
+        TextView titleStandBy = itemStandBy.findViewById(R.id.itemTitle);
+        TextView subtitleStandBy = itemStandBy.findViewById(R.id.itemSubtitle);
+        if (iconStandBy != null) iconStandBy.setImageResource(R.drawable.ic_clock);
+        if (titleStandBy != null) titleStandBy.setText("StandBy Mode");
+        if (subtitleStandBy != null) subtitleStandBy.setText("4 IPS/OLED styles, night tint, clock dials");
+        itemStandBy.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(this, StandByActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) {}
+            finish();
+        });
+        subListContainer.addView(itemStandBy);
+
+        // Focus first option
+        itemLauncher.requestFocus();
+    }
+
 
     private void showBluetoothSubPanel() {
         currentMode = SubViewMode.BLUETOOTH;
