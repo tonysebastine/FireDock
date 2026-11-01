@@ -3,11 +3,11 @@
     android:id="@+id/standbyRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="#07090E"
     android:clipChildren="false"
     android:clipToPadding="false">
 
-    <!-- Ambient Radial Glow (shifts position & hue smoothly) -->
+    <!-- Ambient Vivid Aurora / Radial Glow (Dynamic IPS multi-stop glow) -->
     <View
         android:id="@+id/standbyAmbientGlow"
         android:layout_width="match_parent"
@@ -21,7 +21,9 @@
         android:clipChildren="false"
         android:clipToPadding="false">
 
-        <!-- MODE 0: Dual Widget Mode (iOS StandBy Split View) -->
+        <!-- ======================================================== -->
+        <!-- MODE 0: Dual Widget Split (iOS StandBy Classic)          -->
+        <!-- ======================================================== -->
         <LinearLayout
             android:id="@+id/viewDualWidgets"
             android:layout_width="match_parent"
@@ -36,7 +38,7 @@
             <LinearLayout
                 android:id="@+id/widgetLeft"
                 android:layout_width="0dp"
-                android:layout_height="320dp"
+                android:layout_height="330dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="28dp"
                 android:background="@drawable/glass_panel"
@@ -123,24 +125,22 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- RIGHT WIDGET: Apple Watch Analog Dial OR Weather/World Glances -->
+            <!-- RIGHT WIDGET: Apple Watch Analog Dial + Weather Glance -->
             <FrameLayout
                 android:id="@+id/widgetRightContainer"
                 android:layout_width="0dp"
-                android:layout_height="320dp"
+                android:layout_height="330dp"
                 android:layout_weight="1"
                 android:layout_marginStart="28dp"
                 android:background="@drawable/glass_panel"
                 android:padding="20dp">
 
-                <!-- 1. Analog Face -->
                 <com.appletv.launcher.StandByAnalogClock
                     android:id="@+id/standbyAnalogClock"
-                    android:layout_width="280dp"
-                    android:layout_height="280dp"
+                    android:layout_width="290dp"
+                    android:layout_height="290dp"
                     android:layout_gravity="center" />
 
-                <!-- 2. Weather & World Info Overlay Card -->
                 <LinearLayout
                     android:id="@+id/standbyGlanceInfo"
                     android:layout_width="wrap_content"
@@ -175,7 +175,9 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- MODE 1: Full-Screen Minimalist Bold Digital Face -->
+        <!-- ======================================================== -->
+        <!-- MODE 1: Full-Screen Minimalist Ultra-Clean Digital Face  -->
+        <!-- ======================================================== -->
         <LinearLayout
             android:id="@+id/viewFullScreenDigital"
             android:layout_width="match_parent"
@@ -232,6 +234,252 @@
                 android:letterSpacing="0.02" />
         </LinearLayout>
 
+        <!-- ======================================================== -->
+        <!-- MODE 2: IPS Aurora Horizon (Apple tvOS Specular Glow)    -->
+        <!-- Rich, high dynamic range layout crafted for IPS panels   -->
+        <!-- ======================================================== -->
+        <LinearLayout
+            android:id="@+id/viewAuroraHorizon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="72dp"
+            android:paddingEnd="72dp"
+            android:visibility="gone">
+
+            <!-- Left: Gigantic 140sp Clean Typography -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.2"
+                android:orientation="vertical">
+
+                <TextClock
+                    android:id="@+id/auroraClock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="HH:mm"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="135sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="-0.05"
+                    android:includeFontPadding="false"
+                    android:shadowColor="#AA000000"
+                    android:shadowDy="6"
+                    android:shadowRadius="24" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextClock
+                        android:id="@+id/auroraDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:format12Hour="EEEE • MMMM d"
+                        android:format24Hour="EEEE • d MMMM"
+                        android:textColor="#E6FFFFFF"
+                        android:textSize="26sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01" />
+
+                    <TextView
+                        android:id="@+id/auroraAmPm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:background="@drawable/cc_glass_tile"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:text="LIVE"
+                        android:textColor="#30D158"
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif-bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Right: Tri-Pill Widget Stack with specular frosted tiles -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.9"
+                android:layout_marginStart="40dp"
+                android:orientation="vertical">
+
+                <!-- Card 1: Today's Calendar Glance -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:background="@drawable/glass_panel"
+                    android:gravity="center_vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_calendar"
+                        android:tint="#FF3B30"
+                        android:contentDescription="@null" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Schedule"
+                            android:textColor="#99FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="No Upcoming Events"
+                            android:textColor="#FFFFFFFF"
+                            android:textSize="15sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Card 2: Weather & Conditions -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/glass_panel"
+                    android:gravity="center_vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_weather_cloud"
+                        android:tint="#0A84FF"
+                        android:contentDescription="@null" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Weather Condition"
+                            android:textColor="#99FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="24°C • Pleasant Breeze"
+                            android:textColor="#FFFFFFFF"
+                            android:textSize="15sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Card 3: FireDock Now Playing & Audio Output -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="72dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/glass_panel"
+                    android:gravity="center_vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_music"
+                        android:tint="#BF5AF2"
+                        android:contentDescription="@null" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Audio System"
+                            android:textColor="#99FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:id="@+id/auroraAudioText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TV Speakers • Spatial Ready"
+                            android:textColor="#FFFFFFFF"
+                            android:textSize="15sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ======================================================== -->
+        <!-- MODE 3: Apple Chronograph Studio                        -->
+        <!-- Bold centered circular chronometer for IPS wide viewing  -->
+        <!-- ======================================================== -->
+        <FrameLayout
+            android:id="@+id/viewChronoStudio"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.appletv.launcher.StandByAnalogClock
+                    android:id="@+id/chronoStudioClock"
+                    android:layout_width="380dp"
+                    android:layout_height="380dp" />
+
+                <TextClock
+                    android:id="@+id/chronoStudioDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:format12Hour="EEEE, MMMM d"
+                    android:format24Hour="EEEE, d MMMM"
+                    android:textColor="#E6FFFFFF"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.04" />
+            </LinearLayout>
+        </FrameLayout>
+
         <!-- Hint bar at bottom (subtle fade out) -->
         <TextView
             android:id="@+id/standbyHintText"
@@ -239,12 +487,11 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="24dp"
-            android:text="Press Left/Right to Switch Style • Menu for Night Mode • Any Key to Exit"
-            android:textColor="#55FFFFFF"
+            android:text="◀ / ▶ Switch Style • Menu: Night Mode • Any Key to Exit"
+            android:textColor="#66FFFFFF"
             android:textSize="13sp"
             android:fontFamily="sans-serif"
-            android:letterSpacing="0.02" />
+            android:letterSpacing="0.03" />
 
     </FrameLayout>
 </FrameLayout>
-

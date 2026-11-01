@@ -27,14 +27,19 @@ import java.util.Random;
 
 /**
  * Authentic Apple TV / iOS 17 & tvOS 18 StandBy Mode:
- * - OLED pitch-black background with dynamic radial ambient glow.
- * - Dual-Widget Split Mode (iOS StandBy Dual Platter):
- *     * Left: Giant bold digital typography clock + day/calendar + Wi-Fi status.
- *     * Right: Authentic Apple Watch analog dial clock with sweeping hands + weather/glances.
- * - Full-Screen Minimalist Digital Clock Mode (D-Pad Left/Right cycles modes).
- * - Deep Red OLED Night Mode (Press Menu or Down key, or automatic).
- * - 60s Anti-Burn-In Pixel Shifting (smooth drift prevents OLED image retention).
- * - Instant dismiss on any remote key (Select / Back / Home / Navigation).
+ * Specially tuned with high contrast and specular glass aesthetics for IPS & OLED displays.
+ *
+ * 4 Distinct StandBy Layout Styles:
+ * 0. Dual Widgets (iOS StandBy Dual Platters: Big Digital Clock + Analog Watch Dial & Weather).
+ * 1. Full-Screen Minimalist Ultra-Clean Digital Typography (Thin 170sp hero time).
+ * 2. IPS Aurora Horizon (Apple tvOS Specular Glow + Live Tri-Pill Calendar/Weather/Audio Glance).
+ * 3. Apple Chronograph Studio (380dp High-Definition Center Chronometer for IPS viewing angles).
+ *
+ * Features:
+ * - IPS-tuned Vivid Radial Gradient Ambient Glow (Subtle navy/indigo/teal illumination, never washes out black levels).
+ * - Deep Red OLED/IPS Night Mode (Press Menu or Down key).
+ * - 60-Second Anti-Burn-In Pixel Drift.
+ * - Single-press dismiss on any remote key.
  */
 public class StandByActivity extends Activity {
 
@@ -42,16 +47,19 @@ public class StandByActivity extends Activity {
     private static final String KEY_STYLE = "standby_style";
     private static final String KEY_NIGHT = "standby_night";
 
+    private static final int TOTAL_MODES = 4;
+
     private static final long DRIFT_INTERVAL_MS = 60_000L;
     private static final long ANALOG_TICK_INTERVAL_MS = 100L;
 
-    // tvOS ambient radial glow palette (subtle, low saturation for OLED)
+    // Specular IPS Ambient Glow Palette (Deep multi-hue saturation, vivid specular tone)
     private static final int[] AMBIENT_PALETTE = {
-            0xFF2B5CFF, // Deep Indigo
-            0xFF00A39A, // Apple Teal
-            0xFF8A3FFC, // Electric Violet
-            0xFFE0661B, // Sunset Amber
-            0xFFD6336C  // Magenta Glow
+            0xFF1E3C72, // Ocean Deep Blue
+            0xFF2A5298, // Royal Indigo
+            0xFF0F2027, // Slate Teal
+            0xFF2C3E50, // Midnight Graphite
+            0xFF4A00E0, // Electric Iris
+            0xFF8E2DE2  // Deep Orchid
     };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -61,15 +69,23 @@ public class StandByActivity extends Activity {
     private View ambientGlowView;
     private GradientDrawable ambientDrawable;
     private FrameLayout container;
+
+    // Mode Views
     private View viewDualWidgets;
     private View viewFullScreenDigital;
+    private View viewAuroraHorizon;
+    private View viewChronoStudio;
+
+    // Clocks
     private StandByAnalogClock analogClock;
+    private StandByAnalogClock chronoStudioClock;
+
     private TextView standbyStatusText;
     private ImageView standbyWifiIcon;
     private TextView hintText;
 
     // State
-    private int currentMode = 0; // 0 = Dual Widgets, 1 = Fullscreen Minimal Digital
+    private int currentMode = 0;
     private boolean isNightMode = false;
     private int paletteIndex = 0;
 
@@ -77,8 +93,10 @@ public class StandByActivity extends Activity {
     private final Runnable analogTick = new Runnable() {
         @Override
         public void run() {
-            if (analogClock != null && currentMode == 0) {
+            if (currentMode == 0 && analogClock != null) {
                 analogClock.invalidate();
+            } else if (currentMode == 3 && chronoStudioClock != null) {
+                chronoStudioClock.invalidate();
             }
             handler.postDelayed(this, ANALOG_TICK_INTERVAL_MS);
         }
@@ -117,16 +135,22 @@ public class StandByActivity extends Activity {
         root = findViewById(R.id.standbyRoot);
         ambientGlowView = findViewById(R.id.standbyAmbientGlow);
         container = (FrameLayout) findViewById(R.id.standbyContentContainer);
+
         viewDualWidgets = findViewById(R.id.viewDualWidgets);
         viewFullScreenDigital = findViewById(R.id.viewFullScreenDigital);
+        viewAuroraHorizon = findViewById(R.id.viewAuroraHorizon);
+        viewChronoStudio = findViewById(R.id.viewChronoStudio);
+
         analogClock = findViewById(R.id.standbyAnalogClock);
+        chronoStudioClock = findViewById(R.id.chronoStudioClock);
+
         standbyStatusText = findViewById(R.id.standbyStatusText);
         standbyWifiIcon = findViewById(R.id.standbyWifiIcon);
         hintText = findViewById(R.id.standbyHintText);
 
         // Load saved preferences
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        currentMode = prefs.getInt(KEY_STYLE, 0);
+        currentMode = prefs.getInt(KEY_STYLE, 0) % TOTAL_MODES;
         isNightMode = prefs.getBoolean(KEY_NIGHT, false);
 
         setupAmbientGlow();
@@ -137,13 +161,13 @@ public class StandByActivity extends Activity {
         // Start tickers
         handler.post(analogTick);
         handler.postDelayed(burnInDriftTick, DRIFT_INTERVAL_MS);
-        handler.postDelayed(hideHintRunnable, 5000); // fade out hint after 5s
+        handler.postDelayed(hideHintRunnable, 5000);
 
         // Entrance animation
         if (container != null) {
             container.setAlpha(0f);
-            container.setScaleX(0.95f);
-            container.setScaleY(0.95f);
+            container.setScaleX(0.96f);
+            container.setScaleY(0.96f);
             container.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(600).start();
         }
     }
@@ -153,8 +177,8 @@ public class StandByActivity extends Activity {
         ambientDrawable.setGradientType(GradientDrawable.RADIAL_GRADIENT);
         ambientGlowView.setBackground(ambientDrawable);
         ambientGlowView.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            ambientDrawable.setGradientRadius((r - l) * 0.55f);
-            ambientDrawable.setGradientCenter(0.5f, 0.5f);
+            ambientDrawable.setGradientRadius((r - l) * 0.60f);
+            ambientDrawable.setGradientCenter(0.5f, 0.45f);
         });
         paletteIndex = random.nextInt(AMBIENT_PALETTE.length);
         setAmbientColor(AMBIENT_PALETTE[paletteIndex]);
@@ -163,9 +187,10 @@ public class StandByActivity extends Activity {
     private void setAmbientColor(int color) {
         if (isNightMode) {
             // Ultra dim crimson radial glow
-            ambientDrawable.setColors(new int[]{0x2A500000, 0x00000000});
+            ambientDrawable.setColors(new int[]{0x2E5A0000, 0x00000000});
         } else {
-            int glowCenter = Color.argb(45, Color.red(color), Color.green(color), Color.blue(color));
+            // IPS specular ambient radial glow
+            int glowCenter = Color.argb(60, Color.red(color), Color.green(color), Color.blue(color));
             ambientDrawable.setColors(new int[]{glowCenter, 0x00000000});
         }
     }
@@ -177,19 +202,18 @@ public class StandByActivity extends Activity {
         int newColor = AMBIENT_PALETTE[paletteIndex];
 
         ValueAnimator anim = ValueAnimator.ofObject(new ArgbEvaluator(), oldColor, newColor);
-        anim.setDuration(3000);
+        anim.setDuration(3500);
         anim.addUpdateListener(a -> setAmbientColor((int) a.getAnimatedValue()));
         anim.start();
     }
 
     /**
-     * Subtle random pixel drift to safeguard OLED displays against burn-in.
+     * Subtle random pixel drift to safeguard displays against image persistence.
      */
     private void applyBurnInDrift() {
         if (container == null) return;
-        // Shift container by subtle offset between -20px and +20px
-        float targetX = (random.nextFloat() * 40f) - 20f;
-        float targetY = (random.nextFloat() * 30f) - 15f;
+        float targetX = (random.nextFloat() * 36f) - 18f;
+        float targetY = (random.nextFloat() * 26f) - 13f;
 
         container.animate()
                 .translationX(targetX)
@@ -197,10 +221,9 @@ public class StandByActivity extends Activity {
                 .setDuration(2500)
                 .start();
 
-        // Also drift ambient glow center slightly
         if (ambientDrawable != null) {
             float cx = 0.5f + (targetX / 1920f);
-            float cy = 0.5f + (targetY / 1080f);
+            float cy = 0.45f + (targetY / 1080f);
             ambientDrawable.setGradientCenter(cx, cy);
         }
     }
@@ -233,56 +256,81 @@ public class StandByActivity extends Activity {
     }
 
     private void applyModeVisuals() {
-        if (currentMode == 0) {
-            viewDualWidgets.setVisibility(View.VISIBLE);
-            viewFullScreenDigital.setVisibility(View.GONE);
-        } else {
-            viewDualWidgets.setVisibility(View.GONE);
-            viewFullScreenDigital.setVisibility(View.VISIBLE);
-        }
+        if (viewDualWidgets != null) viewDualWidgets.setVisibility(currentMode == 0 ? View.VISIBLE : View.GONE);
+        if (viewFullScreenDigital != null) viewFullScreenDigital.setVisibility(currentMode == 1 ? View.VISIBLE : View.GONE);
+        if (viewAuroraHorizon != null) viewAuroraHorizon.setVisibility(currentMode == 2 ? View.VISIBLE : View.GONE);
+        if (viewChronoStudio != null) viewChronoStudio.setVisibility(currentMode == 3 ? View.VISIBLE : View.GONE);
     }
 
     private void applyNightModeVisuals() {
-        int clockPrimaryColor = isNightMode ? 0xFFFF3B30 : 0xFFFFFFFF; // Apple Red Tint
+        int clockPrimaryColor = isNightMode ? 0xFFFF3B30 : 0xFFFFFFFF; // Apple Crimson Red Tint
         int clockSecColor = isNightMode ? 0x99FF3B30 : 0x88FFFFFF;
-        int accentColor = isNightMode ? 0xFFFF453A : 0xFFFF453A;
+        int accentColor = 0xFFFF453A;
 
-        // Digital clocks color
-        TextView hours = findViewById(R.id.standbyClockHours);
-        TextView ampm = findViewById(R.id.standbyClockAmPm);
-        TextView date = findViewById(R.id.standbyDate);
-        TextView fullClock = findViewById(R.id.fullBigClock);
-        TextView fullAmPm = findViewById(R.id.fullBigAmPm);
-        TextView fullDate = findViewById(R.id.fullBigDate);
+        // Digital clocks color updates
+        int[] textIds = {
+                R.id.standbyClockHours, R.id.standbyClockAmPm, R.id.standbyDate,
+                R.id.fullBigClock, R.id.fullBigAmPm, R.id.fullBigDate,
+                R.id.auroraClock, R.id.auroraDate, R.id.chronoStudioDate
+        };
 
-        if (hours != null) hours.setTextColor(clockPrimaryColor);
-        if (ampm != null) ampm.setTextColor(clockSecColor);
-        if (date != null) date.setTextColor(clockSecColor);
-        if (fullClock != null) fullClock.setTextColor(clockPrimaryColor);
-        if (fullAmPm != null) fullAmPm.setTextColor(clockSecColor);
-        if (fullDate != null) fullDate.setTextColor(clockSecColor);
+        for (int id : textIds) {
+            TextView tv = findViewById(id);
+            if (tv != null) {
+                if (id == R.id.standbyClockHours || id == R.id.fullBigClock || id == R.id.auroraClock) {
+                    tv.setTextColor(clockPrimaryColor);
+                } else {
+                    tv.setTextColor(clockSecColor);
+                }
+            }
+        }
 
         if (analogClock != null) {
             analogClock.setColors(clockPrimaryColor, clockSecColor, accentColor);
+        }
+        if (chronoStudioClock != null) {
+            chronoStudioClock.setColors(clockPrimaryColor, clockSecColor, accentColor);
         }
 
         setAmbientColor(AMBIENT_PALETTE[paletteIndex]);
     }
 
-    private void cycleMode() {
-        currentMode = (currentMode == 0) ? 1 : 0;
+    private void cycleMode(boolean forward) {
+        if (forward) {
+            currentMode = (currentMode + 1) % TOTAL_MODES;
+        } else {
+            currentMode = (currentMode - 1 + TOTAL_MODES) % TOTAL_MODES;
+        }
+
         getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putInt(KEY_STYLE, currentMode)
                 .apply();
 
-        // Animate transition
-        viewDualWidgets.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+        // Smooth Crossfade Transition
+        View currentActiveView = getCurrentModeView();
+        if (currentActiveView != null) {
+            currentActiveView.animate().alpha(0f).setDuration(200).withEndAction(() -> {
+                applyModeVisuals();
+                View targetView = getCurrentModeView();
+                if (targetView != null) {
+                    targetView.setAlpha(0f);
+                    targetView.animate().alpha(1f).setDuration(300).start();
+                }
+            }).start();
+        } else {
             applyModeVisuals();
-            View target = (currentMode == 0) ? viewDualWidgets : viewFullScreenDigital;
-            target.setAlpha(0f);
-            target.animate().alpha(1f).setDuration(350).start();
-        }).start();
+        }
+    }
+
+    private View getCurrentModeView() {
+        switch (currentMode) {
+            case 0: return viewDualWidgets;
+            case 1: return viewFullScreenDigital;
+            case 2: return viewAuroraHorizon;
+            case 3: return viewChronoStudio;
+            default: return viewDualWidgets;
+        }
     }
 
     private void toggleNightMode() {
@@ -301,7 +349,7 @@ public class StandByActivity extends Activity {
                     .alpha(0f)
                     .scaleX(0.94f)
                     .scaleY(0.94f)
-                    .setDuration(250)
+                    .setDuration(220)
                     .withEndAction(this::finish)
                     .start();
         } else {
@@ -312,9 +360,13 @@ public class StandByActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_LEFT:
             case KeyEvent.KEYCODE_DPAD_RIGHT:
-                cycleMode();
+                cycleMode(true);
+                showTemporaryHint();
+                return true;
+
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                cycleMode(false);
                 showTemporaryHint();
                 return true;
 
