@@ -663,17 +663,35 @@ public final class QuickSettingsActivity extends Activity {
             });
         }
 
-        // Cast / AirPlay
+        // Cast / AirPlay / Display Mirroring
         View btnCast = findViewById(R.id.btnCast);
         if (btnCast != null) {
             btnCast.setOnClickListener(v -> {
+                boolean launched = false;
+                // 1. Direct Fire TV Native Display Mirroring Sink Activity
                 try {
-                    startActivity(new Intent("android.settings.CAST_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                } catch (Exception e) {
+                    Intent sinkIntent = new Intent();
+                    sinkIntent.setClassName("com.amazon.cast.sink", "com.amazon.cast.sink.DisplayMirroringSinkActivity");
+                    sinkIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(sinkIntent);
+                    launched = true;
+                } catch (Exception ignored) {}
+
+                // 2. Fallback to Miracast / Wi-Fi Display Settings
+                if (!launched) {
                     try {
                         startActivity(new Intent("android.settings.WIFI_DISPLAY_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        launched = true;
+                    } catch (Exception ignored) {}
+                }
+
+                // 3. Fallback to generic Android Cast Settings
+                if (!launched) {
+                    try {
+                        startActivity(new Intent("android.settings.CAST_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        launched = true;
                     } catch (Exception ignored) {
-                        Toast.makeText(this, "Screen Casting is Ready", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Display Mirroring Ready", Toast.LENGTH_SHORT).show();
                     }
                 }
                 finish();
