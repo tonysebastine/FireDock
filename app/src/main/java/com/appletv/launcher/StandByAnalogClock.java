@@ -153,3 +153,4 @@ public class StandByAnalogClock extends View {
         canvas.drawLine(cx, cy, cx + length * sin, cy - length * cos, paint);
     }
 }
+
